@@ -15,7 +15,7 @@ REDIRECT_URI = 'http://localhost:5000/callback'
 
 AUTH_URL = 'https://accounts.spotify.com/authorize'
 TOKEN_URL = 'https://accounts.spotify.com/api/token'
-API_BASE_URL = 'https://api.spotify.com/v1'
+API_BASE_URL = 'https://api.spotify.com/v1/'
 
 @app.route('/')
 def index():
@@ -59,11 +59,45 @@ def callback():
     session['expires_at'] = datetime.now().timestamp() + token_info['expires_in'] # 3600 - token expires after 1 day
     return redirect('/playlists')
 
+# Get user's playlists' info
 @app.route('/playlists')
 def get_playlists():
   if 'access_token' not in session: # error handling
     return redirect('/login')
 
+  if datetime.now().timestamp() > session['expires_at']:
+    return redirect('refresh-token')
+  
+  headers = {
+    'Authorization': f"Bearer {session['access_token']}"
+  }
+
+  # Playlists retrieved per request
+  limit = 50
+  offset = 0 if 'offset' not in request.args else int(request.args['offset'])
+
+  params = {
+    'limit': limit,
+    'offset': offset
+  }
+
+  response = requests.get(API_BASE_URL + 'me/playlists', headers=headers)
+  playlists = response.json()
+
+  # Update the offset for the next request
+  next_offset = offset + limit
+
+  # Check if there are more playlists to retrieve
+  if len(playlists['items']) == limit:
+    # If there are more playlists, include the next_offset in the redirect URL
+    return redirect(f'/playlists?offset={next_offset}')
+  return jsonify(playlists)
+
+@app.route('/refresh-token')
+def refresh_token():
+  if 'refresh_token' not in session:
+    return redirect('/login')
+  
   if datetime.now().timestamp() > session['expires_at']:
     req_body = {
       'grant_type': 'refresh_token',
@@ -76,7 +110,7 @@ def get_playlists():
     new_token_info = response.json()
 
     session['access_token'] = new_token_info['access_token']
-    session['expires_at'] = datetime.now().timestamp() + token_info['expires_in']
+    session['expires_at'] = datetime.now().timestamp() + new_token_info['expires_in']
 
     return redirect('/playlists')
 
