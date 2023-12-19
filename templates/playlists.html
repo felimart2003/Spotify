@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Spotify Playlists</title>
+    <link rel="stylesheet" href="../static/styles.css" />
+  </head>
+  <body>
+    <h1>Your Spotify Playlists</h1>
+    {% for playlist in playlists %}
+    <div class="playlist">
+      <h2>{{ playlist.name }}</h2>
+      <p>{{ playlist.description }}</p>
+      <button
+        onclick="window.location.href='/create_clean_playlist/{{ playlist.id}}'"
+      >
+        Create Clean Version
+      </button>
+    </div>
+    {% endfor %}
+  </body>
+</html>
